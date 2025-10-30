@@ -1,0 +1,186 @@
+mkdir backend && cd backend
+npm init -y
+npm install express cors
+// backend/server.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+const products = [
+  { id: 1, name: 'T-Shirt', price: 499 },
+  { id: 2, name: 'Jeans', price: 1299 },
+  { id: 3, name: 'Sneakers', price: 2499 },
+  { id: 4, name: 'Cap', price: 299 }
+];
+
+app.get('/api/products', (req, res) => {
+  res.json(products);
+});
+
+const PORT = 5000;
+app.listen(PORT, () => console.log(` Backend running on port ${PORT}`));
+import { configureStore } from '@reduxjs/toolkit';
+import productReducer from '../features/productSlice';
+import cartReducer from '../features/cartSlice';
+
+export const store = configureStore({
+  reducer: {
+    products: productReducer,
+    cart: cartReducer,
+  },
+});
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
+
+// Fetch products from API
+export const fetchProducts = createAsyncThunk('products/fetchProducts', async () => {
+  const response = await axios.get('http://localhost:5000/api/products');
+  return response.data;
+});
+
+const productSlice = createSlice({
+  name: 'products',
+  initialState: {
+    items: [],
+    loading: false,
+  },
+  reducers: {},
+  extraReducers: builder => {
+    builder
+      .addCase(fetchProducts.pending, state => {
+        state.loading = true;
+      })
+      .addCase(fetchProducts.fulfilled, (state, action) => {
+        state.items = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchProducts.rejected, state => {
+        state.loading = false;
+      });
+  },
+});
+
+export default productSlice.reducer;
+import { createSlice } from '@reduxjs/toolkit';
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState: {
+    cartItems: [],
+  },
+  reducers: {
+    addToCart: (state, action) => {
+      const item = action.payload;
+      const existingItem = state.cartItems.find(i => i.id === item.id);
+      if (existingItem) {
+        existingItem.quantity += 1;
+      } else {
+        state.cartItems.push({ ...item, quantity: 1 });
+      }
+    },
+    removeFromCart: (state, action) => {
+      state.cartItems = state.cartItems.filter(i => i.id !== action.payload);
+    },
+    clearCart: (state) => {
+      state.cartItems = [];
+    },
+  },
+});
+
+export const { addToCart, removeFromCart, clearCart } = cartSlice.actions;
+export default cartSlice.reducer;
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchProducts } from '../features/productSlice';
+import { addToCart } from '../features/cartSlice';
+
+function ProductList() {
+  const dispatch = useDispatch();
+  const { items, loading } = useSelector(state => state.products);
+
+  useEffect(() => {
+    dispatch(fetchProducts());
+  }, [dispatch]);
+
+  if (loading) return <p>Loading products...</p>;
+
+  return (
+    <div>
+      <h2> Products</h2>
+      {items.map(product => (
+        <div key={product.id} style={{ border: '1px solid gray', margin: '10px', padding: '10px' }}>
+          <h3>{product.name}</h3>
+          <p>₹{product.price}</p>
+          <button onClick={() => dispatch(addToCart(product))}>
+            Add to Cart
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default ProductList;
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { removeFromCart, clearCart } from '../features/cartSlice';
+
+function Cart() {
+  const dispatch = useDispatch();
+  const { cartItems } = useSelector(state => state.cart);
+
+  const total = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+  return (
+    <div>
+      <h2>🛒 Shopping Cart</h2>
+      {cartItems.length === 0 ? (
+        <p>Your cart is empty!</p>
+      ) : (
+        <>
+          {cartItems.map(item => (
+            <div key={item.id} style={{ border: '1px solid gray', margin: '10px', padding: '10px' }}>
+              <h3>{item.name}</h3>
+              <p>Quantity: {item.quantity}</p>
+              <p>Price: ₹{item.price * item.quantity}</p>
+              <button onClick={() => dispatch(removeFromCart(item.id))}>Remove</button>
+            </div>
+          ))}
+          <h3>Total: ₹{total}</h3>
+          <button onClick={() => dispatch(clearCart())}>Clear Cart</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default Cart;
+import React from 'react';
+import ProductList from './components/ProductList';
+import Cart from './components/Cart';
+
+function App() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '30px' }}>
+      <ProductList />
+      <Cart />
+    </div>
+  );
+}
+
+export default App;
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { Provider } from 'react-redux';
+import { store } from './app/store';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <Provider store={store}>
+    <App />
+  </Provider>
+);
