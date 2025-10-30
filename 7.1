@@ -1,0 +1,88 @@
+mkdir backend && cd backend
+npm init -y
+npm install express cors
+// backend/server.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Sample data
+const users = [
+  { id: 1, name: 'Major Singh', email: 'major@example.com' },
+  { id: 2, name: 'Aarav Sharma', email: 'aarav@example.com' },
+  { id: 3, name: 'Riya Mehta', email: 'riya@example.com' }
+];
+
+// Routes
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
+
+app.get('/api/users', (req, res) => {
+  res.json(users);
+});
+
+// Start server
+const PORT = 5000;
+app.listen(PORT, () => console.log(` Server running on port ${PORT}`));
+cd ..
+npx create-react-app frontend
+cd frontend
+npm install axios
+import React from 'react';
+import UserList from './components/UserList';
+
+function App() {
+  return (
+    <div className="App" style={{ textAlign: 'center', marginTop: '30px' }}>
+      <h1> User List from Express API</h1>
+      <UserList />
+    </div>
+  );
+}
+
+export default App;
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios
+      .get('http://localhost:5000/api/users')
+      .then(response => {
+        setUsers(response.data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching users:', error);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+
+  return (
+    <div>
+      {users.length > 0 ? (
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {users.map(user => (
+            <li key={user.id} style={{ marginBottom: '10px' }}>
+              <strong>{user.name}</strong> — {user.email}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No users found.</p>
+      )}
+    </div>
+  );
+}
+
+export default UserList;
