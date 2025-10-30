@@ -1,0 +1,165 @@
+// backend/server.js
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // React frontend
+    methods: ["GET", "POST"]
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log(`New user connected: ${socket.id}`);
+
+  // Receive message event
+  socket.on('send_message', (data) => {
+    console.log('Message received:', data);
+    // Broadcast to all connected clients
+    io.emit('receive_message', data);
+  });
+
+  // Disconnect event
+  socket.on('disconnect', () => {
+    console.log(` User disconnected: ${socket.id}`);
+  });
+});
+
+// Base route
+app.get('/', (req, res) => {
+  res.send('Socket.io Chat Server is running...');
+});
+
+const PORT = 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+import React from "react";
+import ChatRoom from "./components/ChatRoom";
+
+function App() {
+  return (
+    <div style={{ textAlign: "center", marginTop: "40px" }}>
+      <h1>import React, { useEffect, useState } from "react";
+import io from "socket.io-client";
+import Message from "./Message";
+
+// Connect frontend to backend Socket.io server
+const socket = io.connect("http://localhost:5000");
+
+function ChatRoom() {
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [username, setUsername] = useState("");
+  const [joined, setJoined] = useState(false);
+
+  useEffect(() => {
+    // Listen for incoming messages
+    socket.on("receive_message", (data) => {
+      setMessages((prev) => [...prev, data]);
+    });
+
+    return () => socket.off("receive_message");
+  }, []);
+
+  const sendMessage = () => {
+    if (message.trim() === "") return;
+    const msgData = {
+      username,
+      text: message,
+      time: new Date().toLocaleTimeString(),
+    };
+    socket.emit("send_message", msgData);
+    setMessage("");
+  };
+
+  if (!joined) {
+    return (
+      <div>
+        <h3>Enter your name to join the chat</h3>
+        <input
+          type="text"
+          placeholder="Your name..."
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <button onClick={() => username && setJoined(true)}>Join Chat</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{
+        width: "400px",
+        margin: "auto",
+        padding: "10px",
+        border: "1px solid #aaa",
+        borderRadius: "10px",
+        height: "400px",
+        overflowY: "auto"
+      }}>
+        {messages.map((msg, index) => (
+          <Message key={index} data={msg} self={msg.username === username} />
+        ))}
+      </div>
+
+      <div style={{ marginTop: "15px" }}>
+        <input
+          type="text"
+          value={message}
+          placeholder="Type message..."
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        />
+        <button onClick={sendMessage} style={{ marginLeft: "10px" }}>Send</button>
+      </div>
+    </div>
+  );
+}
+
+export default ChatRoom;
+ Real-Time Chat App</h1>
+      <ChatRoom />
+    </div>
+  );
+}
+import React from "react";
+
+function Message({ data, self }) {
+  return (
+    <div
+      style={{
+        textAlign: self ? "right" : "left",
+        margin: "10px",
+      }}
+    >
+      <div
+        style={{
+          display: "inline-block",
+          background: self ? "#007bff" : "#eee",
+          color: self ? "#fff" : "#000",
+          borderRadius: "10px",
+          padding: "8px 12px",
+          maxWidth: "70%",
+        }}
+      >
+        {!self && <strong>{data.username}</strong>} <br />
+        {data.text} <br />
+        <small>{data.time}</small>
+      </div>
+    </div>
+  );
+}
+
+export default Message;
+
+
+export default App;
